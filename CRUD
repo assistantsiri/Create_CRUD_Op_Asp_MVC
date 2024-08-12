@@ -1,0 +1,381 @@
+
+=============================
+CRUD OPERTAION IN ASP.NET MVC
+=============================
+-------------------
+CREATE PROCEDURE:-
+-------------------
+
+1. TO INSERT DATA:-
+-------------------
+        CREATE PROCEDURE  TOADDEMPLOYEEDATA
+		@ID INT ,@NAME VARCHAR(50),@CITY VARCHAR(50),@ADDRESS VARCHAR(50)
+		AS BEGIN
+		INSERT INTO EMPLOYEE VALUES(@NAME,@CITY ,@ADDRESS )
+		END
+		
+2.TO DISPLAY DATA:-
+-------------------
+        CREATE PROCEDURE TODISPLAYEMPLOYEEDATA
+		@ID INT ,@NAME VARCHAR(50),@CITY VARCHAR(50),@ADDRESS VARCHAR(50)
+        AS
+        BEGIN
+        SELECT * FROM EMPLOYEE
+        END
+
+3.TO UPDATE DATA
+----------------
+        CREATE PROCEDURE TOUPDATEEMPLOYEEDATA
+		@ID INT ,@NAME VARCHAR(50),@CITY VARCHAR(50),@ADDRESS VARCHAR(50)
+        AS
+        BEGIN 
+        UPDATE EMPLOYEE
+        SET NAME=@NAME,CITY=@CITY,ADDRESS=@ADDRESS;
+        WHERE EMPLOYEEID=@ID;
+		
+4.TO DELETE DATA
+----------------
+        CREATE PROCEDURE TODELETEEMPLOYEEDATA
+        @ID INT ,@NAME VARCHAR(50),@CITY VARCHAR(50),@ADDRESS VARCHAR(50)
+        AS
+        BEGIN
+        DELETE FROM EMPLOYEE
+        WHERE EMPLOYEEID=@ID;
+        END		
+		
+		
+------------------
+  IN APPLICATION
+-----------------  
+----------------------------------------------------------
+1. CREATE FOLDER SERVICES AND CREATE CLASS :- Helper class
+-----------------------------------------------------------
+(a)-OPEN APPSETTINGS.JSON:-
+-------------------------
+ "ConnectionStrings": {
+  "DatabaseConnection": "Server=  ;data source=  ;MultipleActiveResultSets=true;User Id= ; Password= ; TrustServerCertificate=True"
+},
+
+
+
+  Public class Helper
+  {
+     private readonly string _connectionString;
+	 public Helper(IConfiguration configuration)
+     {
+        // Retrieve the connection string from appsettings.json
+        _connectionString = configuration.GetConnectionString("DatabaseConnection");
+     } 
+	 -------------------------------------------------
+	 //To Get all DATA-
+	 public IEnumerable<Employee> GetAllEmployees()
+        {
+            var employees = new List<Employee>();
+
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("TODISPLAYEMPLOYEEDATA", conn)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        employees.Add(new Employee
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            Name = reader["Name"].ToString(),
+                            Position = reader["Position"].ToString(),
+                            Salary = Convert.ToDecimal(reader["Salary"])
+                        });
+                    }
+                }
+            }
+
+            return employees;
+        }
+
+	-----------------------------------------------------
+	 public void InsertEmployee(Employee employee)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("TOADDEMPLOYEEDATA", conn)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                cmd.Parameters.AddWithValue("@Name", employee.Name);
+                cmd.Parameters.AddWithValue("@Position", employee.Position);
+                cmd.Parameters.AddWithValue("@Salary", employee.Salary);
+
+                cmd.ExecuteNonQuery();
+            }
+        }
+    -----------------------------------------------------
+        public void UpdateEmployee(Employee employee)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("UpdateEmployee", conn)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                cmd.Parameters.AddWithValue("@Id", employee.Id);
+                cmd.Parameters.AddWithValue("@Name", employee.Name);
+                cmd.Parameters.AddWithValue("@Position", employee.Position);
+                cmd.Parameters.AddWithValue("@Salary", employee.Salary);
+
+                cmd.ExecuteNonQuery();
+            }
+        }
+    -----------------------------------------------------
+        public void DeleteEmployee(int id)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("DeleteEmployee", conn)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                cmd.Parameters.AddWithValue("@Id", id);
+
+                cmd.ExecuteNonQuery();
+            }
+        }
+    -----------------------------------------------------
+        public Employee GetEmployeeById(int id)
+        {
+            Employee employee = null;
+
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("GetEmployeeById", conn)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                cmd.Parameters.AddWithValue("@Id", id);
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        employee = new Employee
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            Name = reader["Name"].ToString(),
+                            Position = reader["Position"].ToString(),
+                            Salary = Convert.ToDecimal(reader["Salary"])
+                        };
+                    }
+                }
+            }
+
+            return employee;
+        }
+    }
+	-----------------------------------------------------
+	
+  }
+
+	--------------------------------------------------Controller-----------------------------------------------
+
+using Microsoft.AspNetCore.Mvc;
+using MyMvcApp.DataAccess;
+using MyMvcApp.Models;
+using System.Collections.Generic;
+
+namespace MyMvcApp.Controllers
+{
+    public class EmployeeController : Controller
+    {
+        private readonly EmployeeDataAccess _employeeDataAccess;
+
+        public EmployeeController(EmployeeDataAccess employeeDataAccess)
+        {
+            _employeeDataAccess = employeeDataAccess;
+        }
+
+        // Display all employees
+        public IActionResult Index()
+        {
+            IEnumerable<Employee> employees = _employeeDataAccess.GetAllEmployees();
+            return View(employees);
+        }
+
+        // Display the form to create a new employee
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        // Handle the form submission for creating a new employee
+        [HttpPost]
+        public IActionResult Create(Employee employee)
+        {
+            if (ModelState.IsValid)
+            {
+                _employeeDataAccess.InsertEmployee(employee);
+                return RedirectToAction("Index");
+            }
+            return View(employee);
+        }
+
+        // Display the form to edit an existing employee
+        [HttpGet]
+        public IActionResult Edit(int id)
+        {
+            Employee employee = _employeeDataAccess.GetEmployeeById(id);
+            if (employee == null)
+            {
+                return NotFound();
+            }
+            return View(employee);
+        }
+
+        // Handle the form submission for updating an existing employee
+        [HttpPost]
+        public IActionResult Edit(Employee employee)
+        {
+            if (ModelState.IsValid)
+            {
+                _employeeDataAccess.UpdateEmployee(employee);
+                return RedirectToAction("Index");
+            }
+            return View(employee);
+        }
+
+        // Display the confirmation page for deleting an employee
+        [HttpGet]
+        public IActionResult Delete(int id)
+        {
+            Employee employee = _employeeDataAccess.GetEmployeeById(id);
+            if (employee == null)
+            {
+                return NotFound();
+            }
+            return View(employee);
+        }
+
+        // Handle the deletion of an employee
+        [HttpPost, ActionName("Delete")]
+        public IActionResult DeleteConfirmed(int id)
+        {
+            _employeeDataAccess.DeleteEmployee(id);
+            return RedirectToAction("Index");
+        }
+    }
+}
+
+ ---------------------------------------------------------View-----------------------------------------------------
+
+Create the Views
+Create the Razor views for Index, Create, Edit, and Delete.
+
+4.1. Index.cshtml (Display all employees in a grid)
+csharp
+Copy code
+@model IEnumerable<MyMvcApp.Models.Employee>
+
+<h2>Employee List</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Salary</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var employee in Model)
+        {
+            <tr>
+                <td>@employee.Name</td>
+                <td>@employee.Position</td>
+                <td>@employee.Salary.ToString("C")</td>
+                <td>
+                    <a href="@Url.Action("Edit", new { id = employee.Id })" class="btn btn-primary">Edit</a>
+                    <a href="@Url.Action("Delete", new { id = employee.Id })" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a href="@Url.Action("Create")" class="btn btn-success">Add New Employee</a>
+4.2. Create.cshtml and Edit.cshtml
+Both views will have similar content:
+
+csharp
+Copy code
+@model MyMvcApp.Models.Employee
+
+<h2>@ViewBag.Title Employee</h2>
+
+<form asp-action="@ViewBag.Action">
+    <div class="form-group">
+        <label asp-for="Name"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="Position"></label>
+        <input asp-for="Position" class="form-control" />
+        <span asp-validation-for="Position" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="Salary"></label>
+        <input asp-for="Salary" class="form-control" />
+        <span asp-validation-for="Salary" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+In the Create.cshtml:
+
+csharp
+Copy code
+@{
+    ViewBag.Title = "Create";
+    ViewBag.Action = "Create";
+}
+In the Edit.cshtml:
+
+csharp
+Copy code
+@{
+    ViewBag.Title = "Edit";
+    ViewBag.Action = "Edit";
+}
+4.3. Delete.cshtml
+csharp
+Copy code
+@model MyMvcApp.Models.Employee
+
+<h2>Delete Employee</h2>
+
+<div>
+    <h3>Are you sure you want to delete this?</h3>
+    <h4>@Model.Name</h4>
+    <dl class="row">
+        <dt class="col-sm-2">Position</dt>
+        <dd class="col-sm-10">@Model.Position</dd>
+        <dt class="col-sm-2">Salary</dt>
+        <dd class="col-sm-10">@Model.Salary.ToString("C")</dd>
+    </dl>
+
+    <form asp-action="DeleteConfirmed">
+        <input type="hidden" asp-for="Id" />
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
