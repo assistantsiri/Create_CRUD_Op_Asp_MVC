@@ -379,3 +379,68 @@ Copy code
         <a asp-action="Index" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
+----------------------------------------------------------------------------------------------------------------------
+
+using Bank_Application.Models;
+using System.Data;
+using System.Data.SqlClient;
+using System.Reflection;
+
+namespace Bank_Application.Services
+{
+    public class StudentDetails
+    {
+        private readonly string _connectionString;
+        public StudentDetails(IConfiguration configuration)
+        {
+            // Retrieve the connection string from appsettings.json
+            _connectionString = configuration.GetConnectionString("DatabaseConnection");
+        }
+        public IEnumerable<Student> GetStudentDetails(int StudentId)
+        {
+            var student = new List<Student>();
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("sp_ManageStudentDetailsForClassNursery", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@Action",      SqlDbType.VarChar).Value = "Read";
+                cmd.Parameters.AddWithValue("@StudentID",   SqlDbType.Int).Value=StudentId;
+                cmd.Parameters.AddWithValue("@FirstName",   SqlDbType.VarChar).Value="";
+                cmd.Parameters.AddWithValue("@LastName",    SqlDbType.VarChar).Value = "";
+                cmd.Parameters.AddWithValue("@DateOfBirth", SqlDbType.Date).Value = "";
+                cmd.Parameters.AddWithValue("@Gender",      SqlDbType.Char).Value = "";
+                cmd.Parameters.AddWithValue("@AddressLine1",SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@AddressLine2",SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@City",        SqlDbType.VarChar).Value = "";
+                cmd.Parameters.AddWithValue("@State",       SqlDbType.VarChar).Value = "";
+                cmd.Parameters.AddWithValue("@PostalCode",  SqlDbType.Int).Value = "";
+                cmd.Parameters.AddWithValue("@Country",     SqlDbType.VarChar).Value = "";
+                cmd.Parameters.AddWithValue("@PhoneNumber", SqlDbType.Int).Value = "";
+                cmd.Parameters.AddWithValue("@Email",       SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@GuardianName",SqlDbType.VarChar).Value = "";
+                cmd.Parameters.AddWithValue("@GuardianRelationship", SqlDbType.VarChar).Value = "";
+                cmd.Parameters.AddWithValue("@GuardianPhoneNumber",  SqlDbType.Int).Value = "";
+                cmd.Parameters.AddWithValue("@GuardianEmail",SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@Section",      SqlDbType.VarChar).Value = "";
+                cmd.Parameters.AddWithValue("@AdmissionFee" ,SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@TransportFee", SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@TuitionFee",   SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@ExamFee",      SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@PreviousSchool", SqlDbType.NVarChar).Value = "";
+                cmd.Parameters.AddWithValue("@PreviousClass", SqlDbType.NVarChar).Value = "";
+                SqlDataReader rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    student.Add(new Student
+                    {
+                       
+                    });
+                }
+                conn.Close();
+                return student;
+
+            }
+        }
+    }
+}
